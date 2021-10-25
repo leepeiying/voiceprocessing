@@ -8,16 +8,17 @@ import scipy.io.wavfile as wavfile
 import IPython
 
 # read signal and get normalized segment feature statistics:
-input_file = "data_diarization_example.wav"
+#input_file = open('filename','r')
+input_file = "1_wav.wav"
 fs, x = read_audio_file(input_file)
-mt_size, mt_step, st_win = 2, 0.1, 0.05
+mt_size, mt_step, st_win = 2, 0.1, 0.1
 [mt_feats, st_feats, _] = mT(x, fs, mt_size * fs, mt_step * fs,
                             round(fs * st_win), round(fs * st_win * 0.5))
 (mt_feats_norm, MEAN, STD) = normalize_features([mt_feats.T])
 mt_feats_norm = mt_feats_norm[0].T
 
 # perform clustering
-n_clusters = 4
+n_clusters = 2
 x_clusters = [np.zeros((fs, )) for i in range(n_clusters)]
 k_means = sklearn.cluster.KMeans(n_clusters=n_clusters)
 k_means.fit(mt_feats_norm.T)
