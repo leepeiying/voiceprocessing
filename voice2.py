@@ -4,6 +4,7 @@ import subprocess
 from scipy.io.wavfile import read
 import matplotlib.pyplot as plt
 import numpy as np
+from pyAudioAnalysis.audioBasicIO import read_audio_file, stereo_to_mono
 
 """
 #大量改檔名
@@ -32,15 +33,17 @@ for i in dirlist:
         print('檔案:',i,'路徑:',Completepath)
         #計算有幾個檔案
         count = count + 1
-        # for mp3 files --> .wav files
+        # for mp3 files --> .wav files(轉成單聲道,頻率為16000Hz 是否一樣頻率?)
         input = f'ffmpeg -i C:\\Users\\User\\voiceprocessing\\internship\\VOA_audio\\mp3\\{count}_mp3.mp3 -ar 16000 -ac 1 -acodec pcm_s16le C:\\Users\\User\\voiceprocessing\\internship\\VOA_audio\\wav\\{count}_wav.wav'
         subprocess.call(input, shell = True)
 """
 
+
 #讀取單個指定wav檔
-input_file = "internship\\VOA_audio\\wav\\2_wav.wav" 
-rate, data = read(input_file)
-#查看取樣頻率
+vid = 2
+input_file = f"internship\\VOA_audio\\wav\\{vid}_wav.wav" 
+rate, data = read_audio_file(input_file)
+#查看取樣頻率(只要大於8000Hz就是無損音質)
 print("Sample rate: {} Hz".format(rate))
 # 查看取樣資料的類型
 print("Data type: {}".format(data.dtype))
@@ -62,8 +65,10 @@ plt.show()
 # 產生時間資料
 time = np.arange(0, len(data)) / rate
 
-plt.figure(figsize=(15, 5))
 
+plt.figure(figsize=(15, 5))
+#Time Domain(Amplitude vs Time)
+#Frequency Domain(Amplitude vs Frequency)
 # 繪製波形圖
 plotA = plt.subplot(211)
 plotA.plot(time, data)
