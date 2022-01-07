@@ -5,6 +5,12 @@ from scipy.io.wavfile import read
 import matplotlib.pyplot as plt
 import numpy as np
 from pyAudioAnalysis.audioBasicIO import read_audio_file, stereo_to_mono
+import os, sklearn.cluster
+from pyAudioAnalysis.MidTermFeatures import mid_feature_extraction as mT
+from pyAudioAnalysis.audioSegmentation import labels_to_segments
+from pyAudioAnalysis.audioTrainTest import normalize_features
+import scipy.io.wavfile as wavfile
+import IPython
 
 """
 #大量改檔名
@@ -41,6 +47,8 @@ for i in dirlist:
 
 #讀取單個指定wav檔
 vid = 2
+speakers = 2
+
 input_file = f"internship\\VOA_audio\\wav\\{vid}_wav.wav" 
 rate, data = read_audio_file(input_file)
 #查看取樣頻率(只要大於8000Hz就是無損音質)
@@ -52,7 +60,7 @@ plt.figure(figsize=(15, 5))
 plt.plot(data[0:1024])
 plt.show()
 #經過傅立葉轉換之後，繪製頻譜圖（spectrum）
-# 傅立葉轉換
+# 傅立葉轉換(頻率分析)
 from scipy.fftpack import fft
 dataFFT = fft(data[0:1024])
 dataFFTAbs = abs(dataFFT[1:512])
@@ -82,3 +90,35 @@ plotB.set_ylabel("Frequency")
 plotB.set_xlabel("Time")
 
 plt.show()
+#fs(rate): 採樣頻率,x(data): 輸入的音頻(數字化的)
+# read signal and get normalized segment feature statistics:
+fs, x = read_audio_file(input_file)
+#st_win, st_step: 短期時長的窗口及步長
+mt_size, mt_step, st_win = 2, 0.1, 0.05
+#特徵抽取(Mid-term feature extraction)
+[mt_feats, st_feats, _] = mT(x, fs, mt_size * fs, mt_step * fs, round(fs * st_win), round(fs * st_win * 0.5))
+(mt_feats_norm, MEAN, STD) = normalize_features([mt_feats.T])
+mt_feats_norm = mt_feats_norm[0].T
+
+# perform clustering
+n_clusters = speakers
+x_clusters = [np.zeros((fs, )) for i in range(n_clusters)]
+k_means = sklearn.cluster.KMeans(n_clusters=n_clusters)
+k_means.fit(mt_feats_norm.T)
+cls = k_means.labels_
+
+# create segments and classes
+segs, c = labels_to_segments(cls, mt_step)  # convert flags to segment limits
+
+#make segs and tags ready for mach_segs\\{vid}.txt file
+seg2txt = []
+for i in np.arange(0,len(segs)):
+    seg2txt.append(str(segs[i][0])+","+ str(segs[i][1])+","+str(c[i]))
+with open(f'VOA_audio\\mach_segs\\{vid}.txt', 'w') as f:
+    for line in seg2txt:
+        f.write(line)
+        f.write('\n')
+
+import webbrowser
+webbrowser.open(f'VOA_audio\\mach_segs\\{vid}.txt')
+
