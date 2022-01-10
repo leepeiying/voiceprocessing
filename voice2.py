@@ -1,16 +1,19 @@
 import os
 from os.path import isfile, join
+import os, sklearn.cluster
 import subprocess
 from scipy.io.wavfile import read
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure
 import numpy as np
 from pyAudioAnalysis.audioBasicIO import read_audio_file, stereo_to_mono
-import os, sklearn.cluster
 from pyAudioAnalysis.MidTermFeatures import mid_feature_extraction as mT
 from pyAudioAnalysis.audioSegmentation import labels_to_segments
 from pyAudioAnalysis.audioTrainTest import normalize_features
 import scipy.io.wavfile as wavfile
 import IPython
+import webbrowser
+
 
 """
 #大量改檔名
@@ -39,7 +42,7 @@ for i in dirlist:
         print('檔案:',i,'路徑:',Completepath)
         #計算有幾個檔案
         count = count + 1
-        # for mp3 files --> .wav files(轉成單聲道,頻率為16000Hz 是否一樣頻率?)
+        # for mp3 files --> .wav files(轉成單聲道,頻率為16000Hz 是否要一樣頻率?)
         input = f'ffmpeg -i C:\\Users\\User\\voiceprocessing\\internship\\VOA_audio\\mp3\\{count}_mp3.mp3 -ar 16000 -ac 1 -acodec pcm_s16le C:\\Users\\User\\voiceprocessing\\internship\\VOA_audio\\wav\\{count}_wav.wav'
         subprocess.call(input, shell = True)
 """
@@ -47,7 +50,9 @@ for i in dirlist:
 
 #讀取單個指定wav檔
 vid = 2
-speakers = 2
+speakers = 3
+
+print("現在的檔案為: ",vid)
 
 input_file = f"internship\\VOA_audio\\wav\\{vid}_wav.wav" 
 rate, data = read_audio_file(input_file)
@@ -109,16 +114,56 @@ cls = k_means.labels_
 
 # create segments and classes
 segs, c = labels_to_segments(cls, mt_step)  # convert flags to segment limits
-
+#pyAudioAnalysis切割時間成txt檔
 #make segs and tags ready for mach_segs\\{vid}.txt file
 seg2txt = []
 for i in np.arange(0,len(segs)):
     seg2txt.append(str(segs[i][0])+","+ str(segs[i][1])+","+str(c[i]))
-with open(f'VOA_audio\\mach_segs\\{vid}.txt', 'w') as f:
+with open(f'internship\\VOA_audio\\mach_segs\\{vid}.txt', 'w') as f:
     for line in seg2txt:
         f.write(line)
         f.write('\n')
 
-import webbrowser
-webbrowser.open(f'VOA_audio\\mach_segs\\{vid}.txt')
+webbrowser.open(f'internship\\VOA_audio\\mach_segs\\{vid}.txt')
 
+#畫切割圖
+man_data = np.genfromtxt(f'internship\\VOA_audio\\clean_segs\\{vid}.txt',delimiter=',')   # array([[1,2,0],[2,4,1],[4,9,0],...])
+mach_data = np.genfromtxt(f'internship\\VOA_audio\\mach_segs\\{vid}.txt',delimiter=',')
+colors = {0:'red',1:'purple',2:'orange',3:'blue',4:'yellow',5:'pink',6:'green',7:'black'}
+
+man_segs= []
+man_tags = []
+mach_segs=[]
+mach_tags=[]
+for i in (man_data):
+    man_segs.append([i[0],i[1]])
+    man_tags.append(i[2])
+for i in (mach_data):
+    mach_segs.append([i[0],i[1]])
+    mach_tags.append(i[2])
+
+man_colors = []
+mach_colors=[]
+for i in man_tags:
+    if i in colors:
+        man_colors.append(colors[i])
+for i in mach_tags:
+    if i in colors:
+        mach_colors.append(colors[i])
+man_line = [[2,2] for i in man_segs]
+mach_line = [[1,1] for i in mach_segs]
+
+figure(figsize=(15,3), dpi=70)
+import matplotlib.font_manager as fm
+font = fm.FontProperties(fname='c:\\windows\\fonts\\mingliu.ttc',size='xx-large')
+
+for i,j,z in zip(man_segs,man_line,man_colors):
+    plt.plot(i,j,color=z,linewidth=20,solid_capstyle='butt')
+for i,j,z in zip(mach_segs,mach_line,mach_colors):
+    plt.plot(i,j,color=z,linewidth=20,solid_capstyle='butt')
+
+plt.ylim(0,3)
+plt.xlim(0,mach_segs[-1][1])
+plt.xlabel('Time (seconds)')
+plt.yticks([0,1,2,3],["","Machine Diarization\n自動分段","Manual Diarization\n手工分段",""],fontproperties=font)
+plt.show()
